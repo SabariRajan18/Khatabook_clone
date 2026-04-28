@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import userDB from "../models/Admin.js";
 import customerModel from "../models/Customers.js";
 import Transaction from "../models/Transactions.js";
+import Funds from "../models/Funds.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 import { get } from 'mongoose';
 
@@ -27,7 +28,31 @@ function getAuthHeaderToken(headers) {
 
   return parts[1];
 }
+const handleError = (res, error) => {
+  console.error('Error:', error.message);
 
+  if (error.message.includes('already exists')) {
+    res.status(409).json({
+      success: false,
+      message: error.message
+    });
+  } else if (error.message.includes('Invalid') || error.message.includes('required')) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  } else if (error.message.includes('token')) {
+    res.status(401).json({
+      success: false,
+      message: error.message
+    });
+  } else {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
 export const controller = {
 
   async register(req, res) {
@@ -58,7 +83,7 @@ export const controller = {
         user
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
@@ -91,7 +116,7 @@ export const controller = {
         user: { id: user.id, email: user.email, name: user.name }
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
@@ -112,13 +137,13 @@ export const controller = {
         user: admin
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
   addCustomer: async (req, res) => {
     try {
-      const { name, phone, address } = req.body;
+      const { name, phone, address, aadhar = "", notes = "" } = req.body;
 
       if (!name || !phone || !address) {
         throw new Error('Name, phone, and address are required');
@@ -142,7 +167,9 @@ export const controller = {
         name,
         phone,
         address,
-        profile: profileUrl
+        profile: profileUrl,
+        aadhar,
+        notes
       });
 
       res.status(201).json({
@@ -151,7 +178,7 @@ export const controller = {
         customer
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
@@ -161,24 +188,24 @@ export const controller = {
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
       const customers = await customerModel.find().skip(skip).limit(limit);
-      res.status(200).json({  
+      res.status(200).json({
         success: true,
         customers,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(await customerModel.countDocuments() / limit),
           pageSize: customers.length
-        } 
+        }
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
   addAmount: async (req, res) => {
     try {
-      const { customerId } = req.params;
-      const { amount } = req.body;
+      const { fundId } = req.params;
+      const { amount, customerId } = req.body;
 
       const customer = await customerModel.findById(customerId);
       if (!customer) {
@@ -188,6 +215,7 @@ export const controller = {
       const transaction = await Transaction.create({
         customerId,
         amount,
+        fundId,
         type: 'credit'
       });
 
@@ -197,14 +225,14 @@ export const controller = {
         transaction
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
   deductAmount: async (req, res) => {
     try {
-      const { customerId } = req.params;
-      const { amount } = req.body;
+      const { fundId } = req.params;
+      const { amount, customerId } = req.body;
 
       const customer = await customerModel.findById(customerId);
       if (!customer) {
@@ -214,6 +242,7 @@ export const controller = {
       const transaction = await Transaction.create({
         customerId,
         amount,
+        fundId,
         type: 'debit'
       });
 
@@ -223,7 +252,7 @@ export const controller = {
         transaction
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
 
@@ -240,33 +269,64 @@ export const controller = {
         transactions
       });
     } catch (error) {
-      this.handleError(res, error);
+      handleError(res, error);
     }
   },
+  addFund: async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      const { type, description = "" } = req.body;
 
-  handleError(res, error) {
-    console.error('Error:', error.message);
+      const fund = await Funds.create({
+        customerId,
+        type,
+        description
+      });
 
-    if (error.message.includes('already exists')) {
-      res.status(409).json({
-        success: false,
-        message: error.message
+      res.status(201).json({
+        success: true,
+        message: 'Fund added successfully',
+        fund
       });
-    } else if (error.message.includes('Invalid') || error.message.includes('required')) {
-      res.status(400).json({
-        success: false,
-        message: error.message
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
+  getFunds: async (req, res) => {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+      const type = req.query.type;
+      const query = type ? { type } : {};
+      const funds = await Funds.find(query).skip(skip).limit(limit);
+
+      res.status(200).json({
+        success: true,
+        message: 'Funds retrieved successfully',
+        data:funds,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(await Funds.countDocuments(query) / limit),
+          pageSize: funds.length
+        } 
       });
-    } else if (error.message.includes('token')) {
-      res.status(401).json({
-        success: false,
-        message: error.message
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
+  getCustomerFunds: async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      const funds = await Funds.find({ customerId });
+
+      res.status(200).json({
+        success: true,
+        message: 'Funds retrieved successfully',
+        funds
       });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
+    } catch (error) {
+      handleError(res, error);
     }
   }
 };

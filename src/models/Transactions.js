@@ -5,6 +5,11 @@ const transactionSchema = new mongoose.Schema({
         ref: 'Customers',
         required: true
     },
+    fundId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Funds',
+        required: false
+    },
     amount: {
         type: String,
         required: true

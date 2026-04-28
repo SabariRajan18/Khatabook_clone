@@ -6,16 +6,18 @@ import upload from '../config/multer.js';
 
 router.post('/auth/register', controller.register);
 router.post('/auth/login', controller.login);
-router.get('/auth/profile',authVerify, controller.getProfile);
+router.get('/auth/profile', authVerify, controller.getProfile);
 
 router.post("/add-customer", authVerify, upload.single('profile'), controller.addCustomer);
-router.get("/get-customers",authVerify, controller.getCustomers);
-// router.get("/get-customer/:id", authVerify, controller.getCustomerById);
-// router.put("/update-customer/:id", authVerify, controller.updateCustomer);
-// router.delete("/delete-customer/:id", authVerify, controller.deleteCustomer);
+router.get("/get-customers", authVerify, controller.getCustomers);
 
-router.post("/add-amount/:customerId", authVerify, controller.addAmount);
-router.post("/deduct-amount/:customerId", authVerify, controller.deductAmount);
+router.post("/add-amount/:fundId", authVerify, controller.addAmount);
+router.post("/deduct-amount/:fundId", authVerify, controller.deductAmount);
+
 router.get("/get-amount/:customerId", authVerify, controller.getAmount);
+
+router.post("/add-fund/:customerId", authVerify, controller.addFund);
+router.get("/get-all-funds/", authVerify, controller.getFunds);
+router.get("/get-funds/:customerId", authVerify, controller.getCustomerFunds);
 
 export default router;
