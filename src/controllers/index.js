@@ -275,12 +275,37 @@ export const controller = {
   addFund: async (req, res) => {
     try {
       const { customerId } = req.params;
-      const { type, description = "" } = req.body;
+      const { type, description = "", period } = req.body;
+
+      if (!type) {
+        throw new Error('Fund type is required');
+      };
+      if (!period) {
+        throw new Error('Fund period is required');
+      };
+      if (!customerId) {
+        throw new Error('Customer ID is required');
+      }
+      if (!["THAVANAI", "SEETU"].includes(type)) {
+        throw new Error('Invalid fund type. Allowed values are THAVANAI and SEETU');
+      };
+      if (type === "THAVANAI" && !["DAILY", "WEEKLY", "MONTHLY"].includes(period)) {
+        throw new Error('Invalid period for THAVANAI type. Allowed values are DAILY, WEEKLY, MONTHLY.');
+      };
+      if (type === "SEETU" && !["WEEKLY", "MONTHLY"].includes(period)) {
+        throw new Error('Invalid period for SEETU type. Allowed values are WEEKLY, MONTHLY.');
+      };
+
+      const existingFunc = await Funds.findOne({ customerId, type, isCompleted: false });
+      if (existingFunc) {
+        throw new Error('An active fund of this type already exists for the customer');
+      }
 
       const fund = await Funds.create({
         customerId,
         type,
-        description
+        description,
+        period
       });
 
       res.status(201).json({
@@ -304,12 +329,12 @@ export const controller = {
       res.status(200).json({
         success: true,
         message: 'Funds retrieved successfully',
-        data:funds,
+        data: funds,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(await Funds.countDocuments(query) / limit),
           pageSize: funds.length
-        } 
+        }
       });
     } catch (error) {
       handleError(res, error);
@@ -324,6 +349,27 @@ export const controller = {
         success: true,
         message: 'Funds retrieved successfully',
         funds
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
+  closeFund: async (req, res) => {
+    try {
+      const { fundId } = req.params;
+      if (!fundId) {
+        throw new Error('Fund ID is required');
+      }
+      const fund = await Funds.findById(fundId);
+      if (!fund) {
+        throw new Error('Fund not found');
+      }
+      fund.isCompleted = true;
+      await fund.save();
+      res.status(200).json({
+        success: true,
+        message: 'Fund closed successfully',
+        fund
       });
     } catch (error) {
       handleError(res, error);
