@@ -296,10 +296,10 @@ export const controller = {
         throw new Error('Invalid period for SEETU type. Allowed values are WEEKLY, MONTHLY.');
       };
 
-      const existingFunc = await Funds.findOne({ customerId, type, isCompleted: false });
-      if (existingFunc) {
-        throw new Error('An active fund of this type already exists for the customer');
-      }
+      // const existingFunc = await Funds.findOne({ customerId, type, isCompleted: false });
+      // if (existingFunc) {
+      //   throw new Error('An active fund of this type already exists for the customer');
+      // }
 
       const fund = await Funds.create({
         customerId,
@@ -311,6 +311,29 @@ export const controller = {
       res.status(201).json({
         success: true,
         message: 'Fund added successfully',
+        fund
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
+  editFund: async (req, res) => {
+    try {
+      const { fundId } = req.params;
+      const { amount } = req.body;
+      if (!fundId) {
+        throw new Error('Fund ID is required');
+      };
+      const fund = await Transaction.findById(fundId);
+      if (!fund) {
+        throw new Error('Fund not found');
+      };
+      fund.amount = amount;
+      await fund.save();
+      
+      res.status(200).json({
+        success: true,
+        message: 'Fund updated successfully',
         fund
       });
     } catch (error) {
