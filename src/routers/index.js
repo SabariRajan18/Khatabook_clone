@@ -18,13 +18,13 @@ router.post("/deduct-amount/:fundId", authVerify, controller.deductAmount);
 router.get("/get-all-funds/", authVerify, controller.getFunds);
 router.post("/add-fund/:customerId", authVerify, controller.addFund);
 router.put("/edit-fund/:fundId", authVerify, controller.editFund);
+router.get("/get-funds/:customerId", authVerify, controller.getCustomerFunds);
 
 
 
 
 router.post("/close-fund/:fundId", authVerify, controller.closeFund);
 
-router.get("/get-funds/:customerId", authVerify, controller.getCustomerFunds);
 router.get("/get-amount/:customerId", authVerify, controller.getAmount);
 
 export default router;

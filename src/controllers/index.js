@@ -330,7 +330,7 @@ export const controller = {
       };
       fund.amount = amount;
       await fund.save();
-      
+
       res.status(200).json({
         success: true,
         message: 'Fund updated successfully',
@@ -366,7 +366,10 @@ export const controller = {
   getCustomerFunds: async (req, res) => {
     try {
       const { customerId } = req.params;
-      const funds = await Funds.find({ customerId });
+      const funds = await Funds.aggregate([
+        { $match: { customerId: new mongoose.Types.ObjectId(customerId) } },
+        { $lookup: { from: 'transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
+      ]);
 
       res.status(200).json({
         success: true,
