@@ -24,7 +24,6 @@ router.get("/get-funds/:customerId", authVerify, controller.getCustomerFunds);
 
 
 router.post("/close-fund/:fundId", authVerify, controller.closeFund);
-
 router.get("/get-amount/:customerId", authVerify, controller.getAmount);
 
 export default router;

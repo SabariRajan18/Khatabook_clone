@@ -5,7 +5,7 @@ import customerModel from "../models/Customers.js";
 import Transaction from "../models/Transactions.js";
 import Funds from "../models/Funds.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
-import { get } from 'mongoose';
+import mongoose, { get } from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
