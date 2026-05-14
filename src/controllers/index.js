@@ -140,7 +140,71 @@ export const controller = {
       handleError(res, error);
     }
   },
+  getFundDetails: async (req, res) => {
+    try {
+      const results = await Funds.aggregate([
+        {
+          $lookup: {
+            from: 'transactions',
+            localField: '_id',
+            foreignField: 'fundId',
+            as: 'transactions'
+          }
+        },
+        {
+          $unwind: {
+            path: '$transactions',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            type: 1,
+            "transactions.amount": 1,
+            "transactions.type": 1
+          }
+        },
+        {
+          $group: {
+            _id: ["$type", "$transactions.type"],
+            transactions: { $push: "$transactions" }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            type: { $arrayElemAt: ["$_id", 0] },
+            transactionType: { $arrayElemAt: ["$_id", 1] },
+            transactions: 1
+          }
+        }
+      ]);
 
+      const fund = results.map(result => {
+        const totalAmount = result.transactions.reduce((sum, transaction) => {
+          if (transaction) {
+            return sum + (+transaction.amount || 0);
+          }
+          return sum;
+        }, 0);
+        return {
+          type: result.type,
+          transactionType: result.transactionType,
+          totalAmount
+        };
+      });
+      console.log({ fund });
+
+      res.status(200).json({
+        success: true,
+        message: 'Fund details retrieved successfully',
+        fund,
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
   addCustomer: async (req, res) => {
     try {
       const { name, phone, address, aadhar = "", notes = "" } = req.body;
@@ -176,26 +240,6 @@ export const controller = {
         success: true,
         message: 'Customer added successfully',
         customer
-      });
-    } catch (error) {
-      handleError(res, error);
-    }
-  },
-
-  getCustomers: async (req, res) => {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const skip = (page - 1) * limit;
-      const customers = await customerModel.find().skip(skip).limit(limit);
-      res.status(200).json({
-        success: true,
-        customers,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(await customerModel.countDocuments() / limit),
-          pageSize: customers.length
-        }
       });
     } catch (error) {
       handleError(res, error);
@@ -400,5 +444,178 @@ export const controller = {
     } catch (error) {
       handleError(res, error);
     }
-  }
+  },
+
+  
+
+  getAllCustomersDetails: async (req, res) => {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      // Get all customers with their funds and transactions
+      const customers = await customerModel.aggregate([
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'transactions',
+            let: { customerId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$customerId', '$$customerId'] }
+                }
+              },
+              {
+                $lookup: {
+                  from: 'Funds',
+                  let: { fundId: '$fundId' },
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: { $eq: ['$_id', '$$fundId'] }
+                      }
+                    },
+                    {
+                      $project: { type: 1 }
+                    }
+                  ],
+                  as: 'fund'
+                }
+              },
+              {
+                $addFields: {
+                  fundType: { $arrayElemAt: ['$fund.type', 0] }
+                }
+              },
+              {
+                $project: { fund: 0 }
+              },
+              {
+                $sort: { createdAt: -1 }
+              }
+            ],
+            as: 'transactions'
+          }
+        },
+        {
+          $addFields: {
+            credit: {
+              THAVANAI: {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$transactions',
+                        as: 'trans',
+                        cond: {
+                          $and: [
+                            { $eq: ['$$trans.type', 'credit'] },
+                            { $eq: ['$$trans.fundType', 'THAVANAI'] }
+                          ]
+                        }
+                      }
+                    },
+                    as: 'trans',
+                    in: { $toDouble: '$$trans.amount' }
+                  }
+                }
+              },
+              SEETU: {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$transactions',
+                        as: 'trans',
+                        cond: {
+                          $and: [
+                            { $eq: ['$$trans.type', 'credit'] },
+                            { $eq: ['$$trans.fundType', 'SEETU'] }
+                          ]
+                        }
+                      }
+                    },
+                    as: 'trans',
+                    in: { $toDouble: '$$trans.amount' }
+                  }
+                }
+              }
+            },
+            debit: {
+              THAVANAI: {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$transactions',
+                        as: 'trans',
+                        cond: {
+                          $and: [
+                            { $eq: ['$$trans.type', 'debit'] },
+                            { $eq: ['$$trans.fundType', 'THAVANAI'] }
+                          ]
+                        }
+                      }
+                    },
+                    as: 'trans',
+                    in: { $toDouble: '$$trans.amount' }
+                  }
+                }
+              },
+              SEETU: {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$transactions',
+                        as: 'trans',
+                        cond: {
+                          $and: [
+                            { $eq: ['$$trans.type', 'debit'] },
+                            { $eq: ['$$trans.fundType', 'SEETU'] }
+                          ]
+                        }
+                      }
+                    },
+                    as: 'trans',
+                    in: { $toDouble: '$$trans.amount' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            userId: '$_id',
+            name: 1,
+            phone: 1,
+            address: 1,
+            profile: 1,
+            credit: 1,
+            debit: 1
+          }
+        }
+      ]);
+
+      const totalCount = await customerModel.countDocuments();
+
+      res.status(200).json({
+        success: true,
+        message: 'All customers details retrieved successfully',
+        data: customers,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          pageSize: customers.length,
+          totalRecords: totalCount
+        }
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
 };
