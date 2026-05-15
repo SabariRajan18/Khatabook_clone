@@ -409,7 +409,8 @@ export const controller = {
   },
   getCustomerFunds: async (req, res) => {
     try {
-      const { customerId, type, period } = req.params;
+      const { customerId } = req.params;
+      const { type, period } = req.query;
       if (!customerId) {
         throw new Error('Customer ID is required');
       };
@@ -418,11 +419,14 @@ export const controller = {
       }
       if (period && !["DAILY", "WEEKLY", "MONTHLY"].includes(period)) {
         throw new Error('Invalid period. Allowed values are DAILY, WEEKLY, MONTHLY.');
-      }
+      };
+      console.log(type, period,"type, period");
+      
       const funds = await Funds.aggregate([
         { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, period, isCompleted: false } },
         { $lookup: { from: 'transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
       ]);
+      console.log({ funds });
 
       res.status(200).json({
         success: true,
