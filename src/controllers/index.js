@@ -107,7 +107,7 @@ export const controller = {
       const token = jwt.sign(
         { id: user.id, email: user.email },
         JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: '10y' }
       );
       res.status(200).json({
         success: true,
@@ -409,15 +409,18 @@ export const controller = {
   },
   getCustomerFunds: async (req, res) => {
     try {
-      const { customerId, type } = req.params;
+      const { customerId, type, period } = req.params;
       if (!customerId) {
         throw new Error('Customer ID is required');
       };
       if (type && !["THAVANAI", "SEETU"].includes(type)) {
         throw new Error('Invalid fund type. Allowed values are THAVANAI and SEETU');
       }
+      if (period && !["DAILY", "WEEKLY", "MONTHLY"].includes(period)) {
+        throw new Error('Invalid period. Allowed values are DAILY, WEEKLY, MONTHLY.');
+      }
       const funds = await Funds.aggregate([
-        { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, isCompleted: false } },
+        { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, period, isCompleted: false } },
         { $lookup: { from: 'transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
       ]);
 
