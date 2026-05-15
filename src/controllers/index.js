@@ -409,9 +409,15 @@ export const controller = {
   },
   getCustomerFunds: async (req, res) => {
     try {
-      const { customerId } = req.params;
+      const { customerId, type } = req.params;
+      if (!customerId) {
+        throw new Error('Customer ID is required');
+      };
+      if (type && !["THAVANAI", "SEETU"].includes(type)) {
+        throw new Error('Invalid fund type. Allowed values are THAVANAI and SEETU');
+      }
       const funds = await Funds.aggregate([
-        { $match: { customerId: new mongoose.Types.ObjectId(customerId) } },
+        { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, isCompleted: false } },
         { $lookup: { from: 'transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
       ]);
 
@@ -446,7 +452,7 @@ export const controller = {
     }
   },
 
-  
+
 
   getAllCustomersDetails: async (req, res) => {
     try {
