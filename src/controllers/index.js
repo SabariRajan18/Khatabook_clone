@@ -140,6 +140,62 @@ export const controller = {
       handleError(res, error);
     }
   },
+
+  async updateProfile(req, res) {
+    try {
+      const { profile: profileUrl } = req.body;
+
+      if (!req.adminId) {
+        throw new Error('Authentication required');
+      }
+
+      let profileLink = null;
+
+      // If file is uploaded, upload to Cloudinary
+      if (req.file) {
+        try {
+          const uploadResult = await uploadToCloudinary(
+            req.file.buffer,
+            req.file.originalname
+          );
+          profileLink = uploadResult.secure_url;
+        } catch (uploadError) {
+          throw new Error(`Profile upload failed: ${uploadError.message}`);
+        }
+      }
+      // If profile URL is provided as a link
+      else if (profileUrl && typeof profileUrl === 'string') {
+        // Validate if it's a valid URL
+        try {
+          new URL(profileUrl);
+          profileLink = profileUrl;
+        } catch (e) {
+          throw new Error('Invalid profile URL format');
+        }
+      }
+      else {
+        throw new Error('Profile file or URL link is required');
+      }
+
+      const updatedAdmin = await userDB.findByIdAndUpdate(
+        req.adminId,
+        { profile: profileLink },
+        { new: true }
+      ).select('-password');
+
+      if (!updatedAdmin) {
+        throw new Error('Admin not found');
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        user: updatedAdmin
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
   getFundDetails: async (req, res) => {
     try {
       const results = await Funds.aggregate([
@@ -245,7 +301,58 @@ export const controller = {
       handleError(res, error);
     }
   },
+  editCustomer: async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      const { name, phone, address, aadhar = "", notes = "", profile: profileUrl } = req.body;
+      if (!customerId) {
+        throw new Error('Customer ID is required');
+      }
+      if (!name || !phone || !address) {
+        throw new Error('Name, phone, and address are required');
+      }
 
+      let profileLink = null;
+      if (req.file) {
+        try {
+          const uploadResult = await uploadToCloudinary(
+            req.file.buffer,
+            req.file.originalname
+          );
+          profileLink = uploadResult.secure_url;
+        } catch (uploadError) {
+          throw new Error(`Profile upload failed: ${uploadError.message}`);
+        }
+      } else if (profileUrl && typeof profileUrl === 'string') {
+        try {
+          new URL(profileUrl);
+          profileLink = profileUrl;
+        } catch (e) {
+          throw new Error('Invalid profile URL format');
+        }
+      } else {
+        throw new Error('Profile file or URL link is required');
+      }
+
+      const customer = await customerModel.findByIdAndUpdate(
+        customerId,
+        { name, phone, address, aadhar, notes, profile: profileLink },
+        { new: true }
+      );
+
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Customer updated successfully',
+        customer
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
   addAmount: async (req, res) => {
     try {
       const { fundId } = req.params;
@@ -420,8 +527,8 @@ export const controller = {
       if (period && !["DAILY", "WEEKLY", "MONTHLY"].includes(period)) {
         throw new Error('Invalid period. Allowed values are DAILY, WEEKLY, MONTHLY.');
       };
-      console.log(type, period,"type, period");
-      
+      console.log(type, period, "type, period");
+
       const funds = await Funds.aggregate([
         { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, period, isCompleted: false } },
         { $lookup: { from: 'transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
@@ -610,8 +717,8 @@ export const controller = {
             profile: 1,
             credit: 1,
             debit: 1,
-            aadhar:1,
-            notes:1,
+            aadhar: 1,
+            notes: 1,
             createdAt: 1,
           }
         }

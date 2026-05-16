@@ -12,6 +12,8 @@ router.get('/fund-details', authVerify, controller.getFundDetails);
 
 
 router.post("/add-customer", authVerify, upload.single('profile'), controller.addCustomer);
+router.put("/edit-customer/:customerId", authVerify, upload.single('profile'), controller.editCustomer);
+
 router.get("/get-customers",  controller.getAllCustomersDetails);
 
 router.post("/add-amount/:fundId", authVerify, controller.addAmount);
