@@ -11,6 +11,8 @@ export const authVerify = (req, res, next) => {
         req.adminId = decoded.id;
         next();
     } catch (error) {
+        console.log({ error });
+
         return res.status(401).json({ success: false, message: 'Unauthorized: Invalid token' });
     }
 };
