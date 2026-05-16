@@ -143,43 +143,48 @@ export const controller = {
 
   async updateProfile(req, res) {
     try {
-      const { profile: profileUrl } = req.body;
+      const { profile: profileUrl, name, phone, address, notes } = req.body;
 
-      if (!req.adminId) {
-        throw new Error('Authentication required');
-      }
-
-      let profileLink = null;
-
-      // If file is uploaded, upload to Cloudinary
+      const updateData = {};
       if (req.file) {
         try {
           const uploadResult = await uploadToCloudinary(
             req.file.buffer,
             req.file.originalname
           );
-          profileLink = uploadResult.secure_url;
+          updateData.profile = uploadResult.secure_url;
         } catch (uploadError) {
           throw new Error(`Profile upload failed: ${uploadError.message}`);
         }
-      }
-      // If profile URL is provided as a link
-      else if (profileUrl && typeof profileUrl === 'string') {
+      } else if (profileUrl && typeof profileUrl === 'string') {
         // Validate if it's a valid URL
         try {
           new URL(profileUrl);
-          profileLink = profileUrl;
+          updateData.profile = profileUrl;
         } catch (e) {
           throw new Error('Invalid profile URL format');
         }
       }
-      else {
-        throw new Error('Profile file or URL link is required');
+
+      if (name) {
+        updateData.name = name;
+      }
+      if (phone) {
+        updateData.phone = phone;
+      }
+      if (address) {
+        updateData.address = address;
+      }
+      if (notes) {
+        updateData.notes = notes;
+      }
+      if (Object.keys(updateData).length === 0) {
+        throw new Error('At least one field (profile, name, phone, address, or notes) is required for update');
       }
 
       const updatedAdmin = await userDB.findByIdAndUpdate(
         req.adminId,
-        { profile: profileLink },
+        updateData,
         { new: true }
       ).select('-password');
 
@@ -304,39 +309,50 @@ export const controller = {
   editCustomer: async (req, res) => {
     try {
       const { customerId } = req.params;
-      const { name, phone, address, aadhar = "", notes = "", profile: profileUrl } = req.body;
+      const { name, phone, address, aadhar, notes, profile: profileUrl } = req.body;
       if (!customerId) {
         throw new Error('Customer ID is required');
       }
-      if (!name || !phone || !address) {
-        throw new Error('Name, phone, and address are required');
-      }
 
-      let profileLink = null;
+      let updated = {}
       if (req.file) {
         try {
           const uploadResult = await uploadToCloudinary(
             req.file.buffer,
             req.file.originalname
           );
-          profileLink = uploadResult.secure_url;
+          updated.profile = uploadResult.secure_url;
         } catch (uploadError) {
           throw new Error(`Profile upload failed: ${uploadError.message}`);
         }
       } else if (profileUrl && typeof profileUrl === 'string') {
         try {
           new URL(profileUrl);
-          profileLink = profileUrl;
+          updated.profile = profileUrl;
         } catch (e) {
           throw new Error('Invalid profile URL format');
         }
-      } else {
-        throw new Error('Profile file or URL link is required');
+      }
+
+      if (name) {
+        updated.name = name;
+      }
+      if (phone) {
+        updated.phone = phone;
+      }
+      if (address) {
+        updated.address = address;
+      }
+      if (aadhar) {
+        updated.aadhar = aadhar;
+      }
+      if (notes) {
+        updated.notes = notes;
       }
 
       const customer = await customerModel.findByIdAndUpdate(
         customerId,
-        { name, phone, address, aadhar, notes, profile: profileLink },
+        { ...updated },
         { new: true }
       );
 
