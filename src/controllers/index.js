@@ -609,7 +609,10 @@ export const controller = {
             address: 1,
             profile: 1,
             credit: 1,
-            debit: 1
+            debit: 1,
+            aadhar:1,
+            notes:1,
+            createdAt: 1,
           }
         }
       ]);
