@@ -18,6 +18,14 @@ const fundSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
+    start_date: {
+        type: Date,
+        default: Date.now,
+    },
+    end_date: {
+        type: Date,
+        default: null,
+    },
     isCompleted: {
         type: Boolean,
         default: false,

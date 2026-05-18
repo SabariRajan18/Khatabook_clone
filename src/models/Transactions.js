@@ -18,7 +18,12 @@ const transactionSchema = new mongoose.Schema({
         type: String,
         enum: ['credit', 'debit'],
         required: true
-    }
+    },
+    receiveType: {
+        type: String,
+        enum: ['CASH', 'GPAY'],
+        required: true
+    },
 }, { collections: 'Transactions', timestamps: true });
 
 const Transaction = mongoose.model('Transactions', transactionSchema);

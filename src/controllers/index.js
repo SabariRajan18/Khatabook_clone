@@ -266,6 +266,67 @@ export const controller = {
       handleError(res, error);
     }
   },
+  dailyReport: async (req, res) => {
+    try {
+      const today = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+      );
+
+      today.setHours(0, 0, 0, 0);
+
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      console.log("Today:", today);
+      console.log("Tomorrow:", tomorrow);
+
+      const report = await Funds.aggregate([
+        {
+          $match: {
+            type: req.query.type
+          }
+        },
+        {
+          $lookup: {
+            from: 'transactions',
+            localField: '_id',
+            foreignField: 'fundId',
+            as: 'transactions'
+          }
+        },
+        {
+          $unwind: {
+            path: '$transactions',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $match: {
+            "transactions.type": "debit",
+            'transactions.createdAt': { $gte: today, $lt: tomorrow }
+          }
+        },
+        {
+          $group: {
+            _id: "$transactions.receiveType",
+            total: {
+              $sum: {
+                $toDouble: "$transactions.amount"
+              }
+            }
+          }
+        }
+      ]);
+      console.log({ report });
+      res.status(200).json({
+        success: true,
+        message: 'Daily report retrieved successfully',
+        report: report.length > 0 ? report : [{ receiveType: req.query.type, total: 0 }]
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  },
   addCustomer: async (req, res) => {
     try {
       const { name, phone, address, aadhar = "", notes = "" } = req.body;
@@ -383,7 +444,8 @@ export const controller = {
         customerId,
         amount,
         fundId,
-        type: 'credit'
+        type: 'credit',
+        receiveType: 'CASH' // Defaulting to CASH, can be modified to accept from req.body if needed
       });
 
       res.status(201).json({
@@ -399,7 +461,7 @@ export const controller = {
   deductAmount: async (req, res) => {
     try {
       const { fundId } = req.params;
-      const { amount, customerId } = req.body;
+      const { amount, customerId, receiveType } = req.body;
 
       const customer = await customerModel.findById(customerId);
       if (!customer) {
@@ -410,7 +472,8 @@ export const controller = {
         customerId,
         amount,
         fundId,
-        type: 'debit'
+        type: 'debit',
+        receiveType: receiveType || 'CASH'
       });
 
       res.status(201).json({
@@ -442,7 +505,7 @@ export const controller = {
   addFund: async (req, res) => {
     try {
       const { customerId } = req.params;
-      const { type, description = "", period } = req.body;
+      const { type, description = "", period, start_date, end_date } = req.body;
 
       if (!type) {
         throw new Error('Fund type is required');
@@ -462,17 +525,19 @@ export const controller = {
       if (type === "SEETU" && !["WEEKLY", "MONTHLY"].includes(period)) {
         throw new Error('Invalid period for SEETU type. Allowed values are WEEKLY, MONTHLY.');
       };
-
-      // const existingFunc = await Funds.findOne({ customerId, type, isCompleted: false });
-      // if (existingFunc) {
-      //   throw new Error('An active fund of this type already exists for the customer');
-      // }
-
+      if (start_date && isNaN(Date.parse(start_date))) {
+        throw new Error('Invalid start date format. Expected a valid date string.');
+      }
+      if (end_date && isNaN(Date.parse(end_date))) {
+        throw new Error('Invalid end date format. Expected a valid date string.');
+      }
       const fund = await Funds.create({
         customerId,
         type,
         description,
-        period
+        period,
+        start_date,
+        end_date
       });
 
       res.status(201).json({
