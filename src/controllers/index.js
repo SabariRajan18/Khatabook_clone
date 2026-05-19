@@ -203,6 +203,7 @@ export const controller = {
   },
   getFundDetails: async (req, res) => {
     try {
+      
       const results = await Funds.aggregate([
         {
           $lookup: {
