@@ -203,11 +203,11 @@ export const controller = {
   },
   getFundDetails: async (req, res) => {
     try {
-      
+
       const results = await Funds.aggregate([
         {
           $lookup: {
-            from: 'transactions',
+            from: 'Transactions',
             localField: '_id',
             foreignField: 'fundId',
             as: 'transactions'
@@ -289,7 +289,7 @@ export const controller = {
         },
         {
           $lookup: {
-            from: 'transactions',
+            from: 'Transactions',
             localField: '_id',
             foreignField: 'fundId',
             as: 'transactions'
@@ -613,7 +613,7 @@ export const controller = {
 
       const funds = await Funds.aggregate([
         { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, period, isCompleted: false } },
-        { $lookup: { from: 'transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
+        { $lookup: { from: 'Transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
       ]);
       console.log({ funds });
 
@@ -662,7 +662,7 @@ export const controller = {
         { $limit: limit },
         {
           $lookup: {
-            from: 'transactions',
+            from: 'Transactions',
             let: { customerId: '$_id' },
             pipeline: [
               {

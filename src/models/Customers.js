@@ -7,7 +7,7 @@ const customerSchema = new mongoose.Schema({
     aadhar: { type: String, default: "" },
     notes:{ type: String, default: "" },
     createdAt: { type: Date, default: Date.now }
-}, { collection: 'customers' });
+}, { collection: 'Customers' });
 
 const Customer = mongoose.model("Customers", customerSchema);
 export default Customer;

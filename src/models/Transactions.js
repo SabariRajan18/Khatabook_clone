@@ -24,7 +24,7 @@ const transactionSchema = new mongoose.Schema({
         enum: ['CASH', 'GPAY'],
         required: true
     },
-}, { collections: 'Transactions', timestamps: true });
+}, { collection: 'Transactions', timestamps: true });
 
 const Transaction = mongoose.model('Transactions', transactionSchema);
 export default Transaction;
