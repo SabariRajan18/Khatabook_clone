@@ -609,10 +609,9 @@ export const controller = {
       if (period && !["DAILY", "WEEKLY", "MONTHLY"].includes(period)) {
         throw new Error('Invalid period. Allowed values are DAILY, WEEKLY, MONTHLY.');
       };
-      console.log(type, period, "type, period");
 
       const funds = await Funds.aggregate([
-        { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, period, isCompleted: false } },
+        { $match: { customerId: new mongoose.Types.ObjectId(customerId), type, period } },
         { $lookup: { from: 'Transactions', localField: '_id', foreignField: 'fundId', as: 'transactions' } }
       ]);
       console.log({ funds });

@@ -98,7 +98,6 @@ const routes = [
     auth: false,
     controller: controller.getCustomerFunds,
   },
-
   // Close Fund
   {
     method: "post",
@@ -106,8 +105,6 @@ const routes = [
     auth: false,
     controller: controller.closeFund,
   },
-
-  // Amount Summary
   {
     method: "get",
     path: "/get-amount/:customerId",
